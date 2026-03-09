@@ -4,7 +4,7 @@ import java.io.File;
 
 public class Main {
     public static void main(String[] args) {
-        ArrayList<Student> students = new ArrayList<>();
+        ArrayList<Person> students = new ArrayList<>();
 
         
 
@@ -18,7 +18,7 @@ public class Main {
                         String age = fields[1];
                         String course = fields[2];
 
-                        Student student = new Student(name, age, course);
+                        Person student = new Person(name, age, course);
                         students.add(student);
 
                         System.out.printf("""

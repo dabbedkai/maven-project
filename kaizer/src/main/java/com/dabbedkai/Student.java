@@ -1,6 +1,6 @@
 package com.dabbedkai;
 public class Student {
-    private String name;
+    private String firstName;
     private String age;
     private String course;
     
