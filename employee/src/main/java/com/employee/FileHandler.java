@@ -1,5 +1,6 @@
 package com.employee;
 
+import com.employee.Employee.EmployeeType;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
@@ -48,9 +49,10 @@ public class FileHandler {
                 return loadedEmployees;
 
             }
+
         } catch (FileNotFoundException e) {
 
-            System.out.println("No prior file found. System starting fresh.");
+            System.out.println("No file found. System starting fresh.");
 
         } catch (IOException e) {
 
