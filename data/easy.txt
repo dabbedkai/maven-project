@@ -1,0 +1,10 @@
+apple
+bread
+chair
+clock
+ghost
+house
+juice
+smile
+train
+water

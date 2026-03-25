@@ -1,0 +1,32 @@
+[
+  {
+    "subject": "COMPRO1",
+    "prelims": 90,
+    "midterms": 90,
+    "finals": 90
+  },
+  {
+    "subject": "COMPRO2",
+    "prelims": 90,
+    "midterms": 90,
+    "finals": 90
+  },
+  {
+    "subject": "OOP",
+    "prelims": 90,
+    "midterms": 90,
+    "finals": 90
+  },
+  {
+    "subject": "DSA",
+    "prelims": 90,
+    "midterms": 90,
+    "finals": 90
+  },
+  {
+    "subject": "MMW",
+    "prelims": 90,
+    "midterms": 90,
+    "finals": 90
+  }
+]

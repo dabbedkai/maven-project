@@ -1,8 +1,12 @@
 
 import java.io.FileWriter;
+import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.List;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.person.person;
 
 public class Main {
@@ -42,5 +46,23 @@ public class Main {
                 FileWriter fw = new FileWriter("person/src/data/person.json");
                 gson.toJson(p, fw);
                 fw.close();
+
+                FileReader fr = new FileReader("person/src/data/person.json");
+
+                Type personType = new TypeToken<person>(){}.getType();
+                List<person> personList = gson.fromJson(fr, personType);
+
+                personList.forEach(person -> {
+                    System.out.printf("""
+                    First Name: %s
+                    Last Name: %s
+                    Age: %d
+                    Email Address: %s
+                    Phone Number: %s
+                    Date of Birth: %s
+                    Home Address: %s
+                    Is Employed: %b
+                    """, person.getFirstName(), person.getLastName(), person.getAge(), person.getEmailAddress(), person.getPhoneNumber(), person.getDateOfBirth(), person.getHomeAddress(), person.isEmployed());
+                });
     }
 }

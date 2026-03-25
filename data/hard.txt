@@ -1,0 +1,10 @@
+blanket
+diamond
+forest
+journey
+mirror
+planet
+puzzle
+rocket
+turtle
+window
