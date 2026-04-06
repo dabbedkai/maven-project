@@ -14,6 +14,7 @@ import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+//sir this is a google code to help file handler's runtime type adapter factory to work
 
 public final class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
     private final Class<?> baseType;
@@ -77,7 +78,7 @@ public final class RuntimeTypeAdapterFactory<T> implements TypeAdapterFactory {
                             + " because it does not define a field named " + typeFieldName);
                 }
                 String label = labelJsonElement.getAsString();
-                @SuppressWarnings("unchecked") // registration requires that subtype extends T
+                @SuppressWarnings("unchecked")
                 TypeAdapter<R> delegate = (TypeAdapter<R>) labelToDelegate.get(label);
                 if (delegate == null) {
                     throw new JsonParseException("cannot deserialize " + baseType + " subtype named "

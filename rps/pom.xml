@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.roshambo</groupId>
-    <artifactId>RoshamboApp</artifactId>
+    <artifactId>RoshamboServer</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
@@ -20,6 +20,5 @@
         <version>2.10.1</version>
     </dependency>
 </dependencies>
-    </dependencies>
 
 </project>
