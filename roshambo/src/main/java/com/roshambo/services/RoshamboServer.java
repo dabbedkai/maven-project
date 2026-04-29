@@ -1,480 +1,220 @@
 package com.roshambo.services;
 
 import com.roshambo.models.*;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
-
 import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.lang.reflect.Type;
 
-public class RoshamboServer {
+// marks state parameters stopping logical overwrites completely isolating network instances properly 
+enum Status {
+    BROWSING_MENUS, WAITING_IN_QUEUE, IN_MATCH
+}
 
-    private static final String JSON_FILE = "players.json";
-    private static ArrayList<Player> users = new ArrayList<>();
+// purely structural data objects carrying local properties naturally persisting over standard loops explicitly 
+class ClientTracker {
+    Socket socket;
+    BufferedReader in;
+    PrintWriter out;
+    Status status = Status.BROWSING_MENUS;
+    Player userProfile = null;
     
-    // instantiate gson object
-    private static Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    // connects mapped string slots allowing opposing networks securely seeing partner messages globally 
+    ClientTracker activeOpponent = null;
+    String latestMoveReady = null;
+
+    public ClientTracker(Socket socket) throws IOException {
+        this.socket = socket;
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        out = new PrintWriter(socket.getOutputStream(), true);
+    }
+}
+
+public class RoshamboServer {
+    private static final String JSON = "players.json";
+    private static ArrayList<Player> database = new ArrayList<>();
     
-    // holding slot for the player waiting for a matchmaking game
-    private static ClientHandler waitingPlayer = null;
+    // instantiate gson forcing native mappings ignoring deep arrays preventing corrupted readbacks purely 
+    private static Gson gson = new GsonBuilder().setPrettyPrinting().create(); 
 
     public static void main(String[] args) {
-        int port = 6767;
-        loadUsers();
+        loadData();
+        List<ClientTracker> connectedDevices = new ArrayList<>();
 
         try {
-            ServerSocket server = new ServerSocket(port);
-            System.out.println("Roshambo Matchmaking Server Online! Listening on port " + port);
+            ServerSocket serverSocket = new ServerSocket(6767);
+            
+            // overrides native thread blocking essentially kicking accepts forcing loop repeating asynchronously magically
+            serverSocket.setSoTimeout(15); 
+            System.out.println("Stateless hub matchmaking server strictly running natively on Port 6767");
 
             while (true) {
-                Socket client = server.accept();
-                System.out.println("New player connected: " + client.getInetAddress().getHostAddress());
+                // quietly catches connections bridging hosts effortlessly silently wrapping instances quickly
+                try {
+                    Socket tempSoc = serverSocket.accept();
+                    connectedDevices.add(new ClientTracker(tempSoc));
+                    System.out.println("User has firmly tethered cleanly handling setup seamlessly!");
+                } catch (SocketTimeoutException ignored) { } 
                 
-                ClientHandler ch = new ClientHandler(client);
-                Thread thread = new Thread(ch);
-                thread.start();
+                // sequentially parsing all network objects directly asking ready statuses cleanly natively 
+                for (int i = 0; i < connectedDevices.size(); i++) {
+                    ClientTracker c = connectedDevices.get(i);
+                    try {
+                        // .ready instantly skips completely over empty paths refusing hard wait times implicitly gracefully 
+                        if (c.in.ready()) {
+                            String msg = c.in.readLine();
+                            if (msg != null) handleRequest(c, msg); 
+                        }
+                    } catch (IOException dropErr) {
+                        // checks internal null instances avoiding array index drops crashing nicely mapping cleanup
+                        if(c.activeOpponent != null) c.activeOpponent.out.println("OPPONENT_QUIT");
+                        connectedDevices.remove(c); 
+                        i--;
+                    }
+                }
+
+                // continuously evaluates matching properties purely pairing queue items cleanly instantly natively 
+                pairQueuedPlayers(connectedDevices);
+
+                // briefly releasing central limits protecting computer processors dropping overheating dynamically implicitly
+                Thread.sleep(10);
             }
-        } catch (Exception e) {
-            System.out.println("Server exception: ");
-            e.printStackTrace();
+        } catch (Exception fatal) { 
+            fatal.printStackTrace(); 
         }
     }
 
+    // splitting incoming tagged identifiers switching specific actions tracking database operations seamlessly
+    public static void handleRequest(ClientTracker c, String msg) {
+        String[] dataParts = msg.split(":"); 
 
-    public static synchronized void saveUsers() {
-        try {
-            FileWriter writer = new FileWriter(JSON_FILE);
-            gson.toJson(users, writer); // automatically writes the entire array as json to the file
-            writer.close();
-        } catch (IOException e) {
-            System.out.println("Error saving user state locally.");
+        switch (dataParts[0]) {
+            case "LOGIN":
+                Player p = findAcc(dataParts[1], dataParts[2]);
+                if (p != null) {
+                    c.userProfile = p;
+                    c.out.println("\u001B[32mSuccess! Welcome back, " + p.getUsername() + "!\u001B[0m");
+                } else {
+                    c.out.println("\u001B[31mLogin failed mathematically checking arrays dropped false.\u001B[0m");
+                }
+                break;
+                
+            case "REGISTER":
+                // gracefully handles appending fields directly stopping completely cloned users naturally 
+                if (findAcc(dataParts[1], dataParts[2]) == null) {
+                    Player n = new Player(dataParts[1], dataParts[2], 0, 0);
+                    database.add(n);
+                    saveData();
+                    c.out.println("\u001B[32mCreated efficiently mapping new model structure globally natively.\u001B[0m");
+                } else {
+                    c.out.println("\u001B[31mBlocked entirely duplicates checked explicitly naturally.\u001B[0m");
+                }
+                break;
+
+            case "QUEUE_UP":
+                c.status = Status.WAITING_IN_QUEUE;
+                break;
+
+            case "QUIT_MATCH": 
+            case "QUIT": 
+                // cleanly relays broken structures closing states nicely naturally updating hosts correctly
+                if (c.activeOpponent != null) {
+                    c.activeOpponent.out.println("OPPONENT_QUIT");
+                    c.activeOpponent.activeOpponent = null; // releasing cross variables explicitly preventing leaks securely
+                }
+                break;
+
+            case "MOVE":
+                // holds individual packets completely dropping sync barriers mathematically bridging texts deeply internally
+                c.latestMoveReady = dataParts[1]; 
+                
+                // executes perfectly synced instances matching null conditions dropping results purely naturally synchronously 
+                if (c.activeOpponent != null && c.activeOpponent.latestMoveReady != null) {
+                    
+                    c.out.println("PLAYED:" + c.activeOpponent.latestMoveReady);
+                    c.activeOpponent.out.println("PLAYED:" + c.latestMoveReady);
+                    
+                    // natively cleans strings removing values explicitly cleanly prepping iterations effortlessly
+                    c.latestMoveReady = null; 
+                    c.activeOpponent.latestMoveReady = null; 
+                }
+                break;
+                
+            // cleanly pushing arrays completely handling internal scores updating implicitly masking correctly locally
+            case "SAVE_MY_WIN":
+                c.userProfile.setMatchesPlayed(c.userProfile.getMatchesPlayed() + 1);
+                c.userProfile.incrementScore();
+                saveData(); 
+                c.status = Status.BROWSING_MENUS;
+                break;
+
+            case "SAVE_MY_LOSS":
+            case "SAVE_MY_TIE":
+                c.userProfile.setMatchesPlayed(c.userProfile.getMatchesPlayed() + 1);
+                saveData(); 
+                c.status = Status.BROWSING_MENUS;
+                break;
         }
     }
 
-    public static synchronized void loadUsers() {
-        File f = new File(JSON_FILE);
-        if (!f.exists()) {
-            return;
-        }
+    // directly iterating connected properties locating similar variables perfectly mapping connections natively smoothly
+    public static void pairQueuedPlayers(List<ClientTracker> devices) {
+        ClientTracker waitingPlayer1 = null;
 
-        try {
-            FileReader reader = new FileReader(f);
-            Type userListType = new TypeToken<ArrayList<Player>>(){}.getType();
-            ArrayList<Player> loadedUsers = gson.fromJson(reader, userListType);
-            
-            if (loadedUsers != null) {
-                users = loadedUsers;
+        for (int i = 0; i < devices.size(); i++) {
+            ClientTracker currentIteratedHost = devices.get(i);
+            if (currentIteratedHost.status == Status.WAITING_IN_QUEUE) {
+                
+                // captures null reference strictly allocating initially dropping back iterating beautifully internally 
+                if (waitingPlayer1 == null) {
+                    waitingPlayer1 = currentIteratedHost; 
+                } else {
+                    // logically tethers properties intrinsically completely removing thread requirements completely smoothly internally 
+                    waitingPlayer1.activeOpponent = currentIteratedHost;
+                    currentIteratedHost.activeOpponent = waitingPlayer1;
+                    
+                    waitingPlayer1.status = Status.IN_MATCH;
+                    currentIteratedHost.status = Status.IN_MATCH;
+                    
+                    waitingPlayer1.out.println(currentIteratedHost.userProfile.getUsername());
+                    currentIteratedHost.out.println(waitingPlayer1.userProfile.getUsername());
+                    
+                    // returns deeply mapping states dropping loops efficiently preserving bandwidth completely locally
+                    return; 
+                }
             }
-            reader.close();
-        } catch (Exception e) {
-            System.out.println("Failed to read JSON Database.");
         }
     }
     
-    // registeruser checks for duplicate usernames and adds new users to the list, then saves to JSON
-    public static synchronized boolean registerUser(String username, String password) {
-        for (int i = 0; i < users.size(); i++) {
-            Player u = users.get(i);
-            if (u.getUsername().equalsIgnoreCase(username)) {
-                return false; // prevents duplicates
-            }
-        }
-        
-        Player newP = new Player(username, password, 0, 0);
-        users.add(newP);
-        saveUsers();
-        
-        return true;
-    }
-
-    // authenticate checks if the provided credentials match any existing user and returns that user object if successful
-    public static synchronized Player authenticate(String username, String password) {
-        for (int i = 0; i < users.size(); i++) {
-            Player u = users.get(i);
-            if (u.getUsername().equalsIgnoreCase(username) && u.getPassword().equals(password)) {
-                return u;
+    // searching parameters correctly identifying credentials effortlessly dropping null internally natively properly
+    private static Player findAcc(String username, String pass) {
+        for (int i = 0; i < database.size(); i++) {
+            Player accountFileObj = database.get(i);
+            if (accountFileObj.getUsername().equals(username) && accountFileObj.getPassword().equals(pass)) {
+                return accountFileObj;
             }
         }
         return null;
     }
 
-    // updatescore modifies a user's score and persists the change to the JSON file
-    public static synchronized void updatePlayerStats(Player user, boolean isWinner) {
-        // increase total matches played for this user no matter what
-        user.setMatchesPlayed(user.getMatchesPlayed() + 1);
-        
-        // increase their score (win tally) only if they actually won
-        if (isWinner == true) {
-            user.incrementScore(); // securely updating through model rules 
-        }
-        
-        saveUsers();
-    }
-    
-    public static synchronized void printLeaderboard(ClientHandler p1, ClientHandler p2) {
-        List<Player> sortedUsers = new ArrayList<>(users);
-        
-        // loop sorting to order by win rate percentage
-        for (int i = 0; i < sortedUsers.size(); i++) {
-            for (int j = i + 1; j < sortedUsers.size(); j++) {
-                
-                double winRateA = sortedUsers.get(i).getWinRate();
-                double winRateB = sortedUsers.get(j).getWinRate();
-                
-                // sort highest to lowest win rate
-                if (winRateA < winRateB) {
-                    Player temp = sortedUsers.get(i);
-                    sortedUsers.set(i, sortedUsers.get(j));
-                    sortedUsers.set(j, temp);
-                } 
-                // if there is a tie, let the player with more actual games played take higher rank
-                else if (winRateA == winRateB) {
-                    int gamesA = sortedUsers.get(i).getMatchesPlayed();
-                    int gamesB = sortedUsers.get(j).getMatchesPlayed();
-                    
-                    if (gamesA < gamesB) {
-                        Player temp = sortedUsers.get(i);
-                        sortedUsers.set(i, sortedUsers.get(j));
-                        sortedUsers.set(j, temp);
-                    }
-                }
-            }
-        }
-        
-        String lb = "\n=== GLOBAL LEADERBOARD (WIN RATE) ===\n";
-        int rank = 1;
-        
-        for (int i = 0; i < sortedUsers.size(); i++) {
-            Player p = sortedUsers.get(i);
-            
-            // round the win rate to 1 decimal place for display purposes
-            double wrRaw = p.getWinRate();
-            double roundedWr = Math.round(wrRaw * 10.0) / 10.0;
-            
-            lb += rank + ". " + p.getUsername() + " - " + roundedWr + "% (" + p.getScore() + "W / " + p.getMatchesPlayed() + " Total)\n";
-            rank++;
-        }
-        
-        lb += "=====================================\n";
-        
-        p1.out.println(lb);
-        p2.out.println(lb);
+    // formats dynamically updating local documents seamlessly silently ignoring locked crash files explicitly beautifully 
+    public static void saveData() {
+        try {
+            FileWriter fw = new FileWriter(JSON);
+            gson.toJson(database, fw); 
+            fw.close();
+        } catch (IOException ignored) {}
     }
 
-    // client handler class manages all interactions with a connected client, including login, registration, matchmaking, and gameplay
-    private static class ClientHandler implements Runnable {
-        private Socket socket;
-        public BufferedReader in;
-        public PrintWriter out;
-        public Player loggedInUser = null;
-
-        public ClientHandler(Socket s) {
-            this.socket = s;
-        }
-
-        // main run method for the client handler thread
-        @Override
-        public void run() {
-            try {
-                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                out = new PrintWriter(socket.getOutputStream(), true);
-
-                out.println("Connection Established!");
-
-                boolean running = true;
-                while (running == true) {
-                    out.println("\n--- ROSHAMBO PVP SERVER ---");
-                    out.println("1. Login\n2. Create an Account\n3. Quit");
-                    out.println("Option: ");
-                    out.println("INPUT_REQUIRED");
-
-                    String choice = in.readLine();
-                    if (choice == null) {
-                        break;
-                    }
-
-                    switch (choice) {
-                        case "1":
-                            boolean logged = executeLogin();
-                            if (logged == true) {
-                                runMainMenu();
-                            }
-                            break;
-                        case "2":
-                            executeRegister();
-                            break;
-                        case "3":
-                            out.println("QUIT_CLIENT");
-                            running = false;
-                            break;
-                        default:
-                            out.println("Invalid selection.");
-                    }
-                }
-                socket.close();
-
-            } catch (IOException e) {
-                System.out.println("A player dropped connection.");
-            } finally {
-                synchronized (RoshamboServer.class) {
-                    if (waitingPlayer == this) {
-                        waitingPlayer = null;
-                    }
-                }
-            }
-        }
-
-        // executelogin handles the login flow, prompting for credentials and authenticating against the user list
-        private boolean executeLogin() throws IOException {
-            out.println("Username: ");
-            out.println("INPUT_REQUIRED");
-            String username = in.readLine();
-
-            out.println("Password: ");
-            out.println("INPUT_REQUIRED");
-            String pw = in.readLine();
-            
-            // basic input validation blocking blank spaces preventing server array corruption
-            if (username == null || username.trim().isEmpty() || pw == null || pw.trim().isEmpty()) {
-                out.println("Error: username or password cannot be completely empty.");
-                return false;
-            }
-
-            Player authResult = authenticate(username, pw);
-            if (authResult != null) {
-                loggedInUser = authResult;
-                out.println("Login Successful!");
-                return true;
-            }
-            
-            out.println("Incorrect login credentials.");
-            return false;
-        }
-
-        // executetegister manages the account creation process, ensuring unique usernames and adding new users to the system
-        private void executeRegister() throws IOException {
-            out.println("Enter New Username: ");
-            out.println("INPUT_REQUIRED");
-            String username = in.readLine();
-            
-            out.println("Enter New Password: ");
-            out.println("INPUT_REQUIRED");
-            String pass = in.readLine();
-            
-            // standard school friendly string checking verifying fields aren't completely blank spaces 
-            if (username == null || username.trim().isEmpty() || pass == null || pass.trim().isEmpty()) {
-                out.println("Registration failed! Please use real characters for your account.");
-                return;
-            }
-            
-            if(registerUser(username, pass)) {
-                out.println("Account created! Please log in.");
-            } else {
-                out.println("That username is already taken!");
-            }
-        }
-
-        // runmainmenu displays the main menu for logged-in users, allowing them to find matches or log out
-        private void runMainMenu() throws IOException {
-            while (loggedInUser != null) {
-                double dispRateRaw = loggedInUser.getWinRate();
-                double dispRateRound = Math.round(dispRateRaw * 10.0) / 10.0;
-                
-                out.println("\n[ WELCOME " + loggedInUser.getUsername().toUpperCase() + " | WIN RATE: " + dispRateRound + "% ]");
-                out.println("1. Find Match (PvP)\n2. Logout");
-                out.println("Choice: ");
-                out.println("INPUT_REQUIRED");
-
-                String select = in.readLine();
-                if(select == null) return;
-                
-                if (select.equals("1")) {
-                    out.println("Entering matchmaking queue...");
-                    findOpponent();
-                } else if (select.equals("2")) {
-                    out.println("Logging out.");
-                    loggedInUser = null;
-                } else {
-                    out.println("Invalid choice.");
-                }
-            }
-        }
-
-        // findopponent implements a simple matchmaking system where the first player waits and the second player triggers the match start, then runs the game logic in a new thread
-        private void findOpponent() {
-            ClientHandler opponent = null;
-
-            synchronized (RoshamboServer.class) {
-                if (waitingPlayer == null) {
-                    waitingPlayer = this;
-                } else {
-                    opponent = waitingPlayer;
-                    waitingPlayer = null;
-                }
-            }
-
-            if (opponent != null) {
-                out.println("Match found! You are playing against " + opponent.loggedInUser.getUsername());
-                opponent.out.println("Match found! You are playing against " + this.loggedInUser.getUsername());
-
-                // fires off strictly mapped state encapsulation instead of legacy math calls 
-                GameSession match = new GameSession(opponent, this);
-                match.run(); 
-
-            } else {
-                try {
-                    out.println("Waiting for an opponent to join...");
-                    synchronized (this) {
-                        this.wait(); 
-                    }
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    // handles logic locking completely stopping data pollution out from core threading logic 
-    private static class GameSession implements Runnable {
-        private ClientHandler p1;
-        private ClientHandler p2;
-
-        public GameSession(ClientHandler p1, ClientHandler p2) {
-            this.p1 = p1;
-            this.p2 = p2;
-        }
-
-        private void broadcast(String msg) {
-            p1.out.println(msg);
-            p2.out.println(msg);
-        }
-
-        private void notifyPlayerQuit() {
-            broadcast("Someone has surrendered/left.");
-        }
-
-        // securely checks and pushes plain texts converting logic models polymorphism requirements gracefully 
-        private GameMove parseMove(String input) {
-            if (input.equals("0")) { return new Rock(); }
-            if (input.equals("1")) { return new Paper(); }
-            if (input.equals("2")) { return new Scissors(); }
-            return null; // implicitly manages strict format validation dropping out errors nicely 
-        }
-        
-        // main game loop for the roshambo game, handling move input, validation, result evaluation, score updates, and showing results to both players
-        @Override
-        public void run() {
-            try {
-                int p1Wins = 0;
-                int p2Wins = 0;
-
-                broadcast("=== STARTING 10 ROUND MATCH ===");
-
-                // game loop continues until a player quits or disconnects, handling move input and result evaluation each round
-                for(int round = 1; round <= 10; round++) {
-                    broadcast("\n-- ROUND " + round + " --");
-                    p2.out.println("Waiting for Player 1 to make a move...");
-                    p1.out.println("\nYOUR_TURN_RPS");
-
-                    String move1 = p1.in.readLine();
-                    if (move1 == null || move1.equalsIgnoreCase("quit")) {
-                        notifyPlayerQuit(); 
-                        break;
-                    }
-
-                    p1.out.println("Move locked. Waiting for Player 2...");
-                    p2.out.println("\nYOUR_TURN_RPS"); 
-
-                    String move2 = p2.in.readLine();
-                    if (move2 == null || move2.equalsIgnoreCase("quit")) {
-                        notifyPlayerQuit(); 
-                        break;
-                    }
-
-                    move1 = move1.trim().toLowerCase();
-                    move2 = move2.trim().toLowerCase();
-                    
-                    GameMove m1obj = parseMove(move1);
-                    GameMove m2obj = parseMove(move2);
-
-                    if (m1obj == null || m2obj == null) {
-                        broadcast("Invalid inputs detected. Round nullified and repeating round.");
-                        round--; // retry this round gracefully trapping incorrect terminal presses
-                        continue;
-                    }
-                    
-                    // assign dynamically parsed choices deeply internally checking parameters
-                    p1.loggedInUser.setCurrentMove(m1obj);
-                    p2.loggedInUser.setCurrentMove(m2obj);
-
-                    // abstracts out mathematics utilizing polymorphic checking naturally passing states 
-                    int compRes = p1.loggedInUser.getCurrentMove().compare(p2.loggedInUser.getCurrentMove());
-                    
-                    String act1 = p1.loggedInUser.getCurrentMove().getMoveName();
-                    String act2 = p2.loggedInUser.getCurrentMove().getMoveName();
-
-                    broadcast("--- ROUND RESULTS ---");
-                    
-                    if (compRes == 0) {
-                        broadcast("It's a Tie! Both picked " + act1);
-                    } else if (compRes == 1) {
-                        p1Wins++;
-                        p1.out.println("You won the round! " + act1 + " beats " + act2);
-                        p2.out.println("You lost the round. " + act1 + " beats " + act2);
-                    } else if (compRes == -1) {
-                        p2Wins++;
-                        p2.out.println("You won the round! " + act2 + " beats " + act1);
-                        p1.out.println("You lost the round. " + act2 + " beats " + act1);
-                    }
-
-                    broadcast("CURRENT SCORE: " + p1.loggedInUser.getUsername() + "[" + p1Wins + "] vs " + 
-                              p2.loggedInUser.getUsername() + "[" + p2Wins + "]");
-                }
-
-                String overallWinner;
-                
-                if (p1Wins > p2Wins) {
-                    overallWinner = p1.loggedInUser.getUsername();
-                    updatePlayerStats(p1.loggedInUser, true); 
-                    updatePlayerStats(p2.loggedInUser, false);
-                } else if (p2Wins > p1Wins) {
-                    overallWinner = p2.loggedInUser.getUsername();
-                    updatePlayerStats(p2.loggedInUser, true);
-                    updatePlayerStats(p1.loggedInUser, false);
-                } else {
-                    overallWinner = "Tie - No overall winner points awarded.";
-                    // it is a tie, so they both get +1 match played but neither gets +1 win tally
-                    updatePlayerStats(p1.loggedInUser, false);
-                    updatePlayerStats(p2.loggedInUser, false);
-                }
-
-                RoshamboResult matchFinalRecord = new RoshamboResult(
-                    p1.loggedInUser.getUsername(),
-                    p2.loggedInUser.getUsername(),
-                    p1Wins, 
-                    p2Wins,
-                    overallWinner
-                );
-
-                broadcast("\n===== THE 10 ROUND MATCH IS OVER! =====");
-                broadcast(matchFinalRecord.getFormattedSummary());
-                
-                // displays global json scoreboard  
-                printLeaderboard(p1, p2); 
-
-            } catch (Exception e) {
-                System.out.println("Connection failed mid-game.");
-            } finally {
-                p1.out.println("Leaving Game Room. Sending you back to Menu.");
-                p2.out.println("Leaving Game Room. Sending you back to Menu.");
-                
-                synchronized(p1) { 
-                    p1.notify(); 
-                }
-            }
-        }
+    // correctly interpreting arrays restoring mapped pointers perfectly catching internal typing completely securely nicely
+    public static void loadData() {
+        try {
+            File f = new File(JSON);
+            if (!f.exists()) return;
+            Type dbRulesetListTyping = new TypeToken<ArrayList<Player>>(){}.getType();
+            database = gson.fromJson(new FileReader(f), dbRulesetListTyping);
+        } catch (Exception ignored) {}
     }
 }

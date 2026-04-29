@@ -1,0 +1,10 @@
+[
+  { "type": "healing" },
+
+  { "type": "toxic" },
+
+  { "type": "fireball" },
+
+  { "type": "mana" }
+  
+]
