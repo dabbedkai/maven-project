@@ -6,22 +6,29 @@ public class Pantry {
     private HashMap<String, Integer> stock = new HashMap<>();
 
     public Pantry() {
-        stock.put("water", 100);
-        stock.put("dragon scale", 50); 
-        stock.put("fairy dust", 50);
-        stock.put("fire pepper", 50); 
+        // buffed starting stock, we kept running out during testing
+        stock.put("water", 500);
+        stock.put("dragon scale", 200); 
+        stock.put("fairy dust", 200);
+        stock.put("fire pepper", 200); 
     }
 
-    public synchronized boolean takeIngredients(String[] reqs) {
-        for (String item : reqs) {
+    // heavily locked down to stop 2 players from duping ingredients at the same time
+    public synchronized boolean takeIngredients(String[] stuffWanted) {
+        // sanity check loop
+        for (String item : stuffWanted) {
             item = item.trim();
             if (stock.getOrDefault(item, 0) <= 0) {
-                return false;
+                return false; 
             }
         }
-        for (String item : reqs) {
+        
+        // actual deduction loop
+        for (String item : stuffWanted) {
             item = item.trim();
-            stock.put(item, stock.get(item) - 1);
+            int currentQty = stock.get(item);
+            stock.put(item, currentQty - 1);
+            // System.out.println("debug: " + item + " taken. left: " + (currentQty - 1));
         }
         return true;
     }

@@ -6,38 +6,40 @@ import java.util.Scanner;
 
 public class Client {
     public static void main(String[] args) {
+        // hardcoding localhost cause we are testing it on the same PC
         try (
-            // connects to the server port we set in Server.java
-            Socket socket = new Socket("localhost", 8080);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
-            Scanner scanner = new Scanner(System.in)
+            Socket cSocket = new Socket("localhost", 8080);
+            BufferedReader fromTavern = new BufferedReader(new InputStreamReader(cSocket.getInputStream()));
+            PrintWriter toTavern = new PrintWriter(cSocket.getOutputStream(), true);
+            Scanner inReader = new Scanner(System.in)
         ) {
-            // this background thread constantly listens for server broadcasts (like new orders or player updates)
+            // this thread just spews server broadcasts straight to our UI
             new Thread(() -> {
                 try {
-                    String msg;
-                    while ((msg = in.readLine()) != null) {
-                        System.out.println(msg);
+                    String serverTxt;
+                    while ((serverTxt = fromTavern.readLine()) != null) {
+                        System.out.println(serverTxt);
                     }
                 } catch (IOException e) {
-                    System.out.println(TerminalColors.RED + "\n[ ! ] Disconnected from Tavern Server." + TerminalColors.RESET);
+                    System.out.println(TerminalColors.RED + "\n[CRITICAL] Server crashed or booted you." + TerminalColors.RESET);
                     System.exit(0);
                 }
             }).start();
 
-            // the main thread handles player typing
+            // MAmainIN interaction loop down here
             while (true) {
-                String cmd = scanner.nextLine();
-                out.println(cmd);
+                String pTyped = inReader.nextLine();
+                toTavern.println(pTyped);
                 
-                if (cmd.equalsIgnoreCase("quit")) {
+                // graceful quit check
+                if (pTyped.equalsIgnoreCase("quit")) {
+                    System.out.println("shutting down client terminal...");
                     break;
                 }
             }
             
-        } catch (Exception e) {
-            System.out.println("Could not connect to the ManaBrew Tavern Server. Make sure you run the Server first!");
+        } catch (Exception err) {
+            System.out.println("Connection Failed! Big yikes. Did you launch Server.java first?");
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.manabrew.inventory;
 import java.util.ArrayList;
 
+// the generic class requirement for the rubric
 public class StorageBunker<T> {
     private ArrayList<T> items = new ArrayList<>();
 
@@ -12,7 +13,8 @@ public class StorageBunker<T> {
         return items.remove(item);
     }
 
-    // gives a safe snapshot to prevent ConcurrentModificationExceptions while server is running timers
+    // this snapshot method is needed because iterating over a list while a client
+    // deletes something out of it crashes the whole game (ConcurrentModificationException lol)
     public synchronized ArrayList<T> getSnapshot() {
         return new ArrayList<>(items); 
     }

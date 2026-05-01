@@ -31,7 +31,12 @@ public class ClientHandler implements Runnable {
             
             out.println(TerminalColors.CYAN + "Welcome to ManaBrew Co-Op Kitchen!" + TerminalColors.RESET);
             out.println("What is your alchemist name?");
+            
+            // waits here until the player hits enter
             playerName = in.readLine();
+            
+            // now we plug them into the chaos of the active kitchen
+            Server.addPlayer(this);
             Server.broadcast(TerminalColors.YELLOW + "[ LOGIN ] " + playerName + " entered the kitchen!" + TerminalColors.RESET);
             out.println("Syntax: brew <ingredient1>, <ingredient2> (e.g. 'brew dragon scale, fairy dust')\n");
 
@@ -47,10 +52,8 @@ public class ClientHandler implements Runnable {
                         userIngredients[i] = userIngredients[i].trim().toLowerCase();
                     }
                     
-                    // sort the arrays to easily compare order!
                     Arrays.sort(userIngredients);
                     
-                    // scan the server's current orders to find a matching recipe
                     OrderTicket targetOrder = null;
                     for (OrderTicket ticket : orders.getSnapshot()) {
                         String[] targetRecipe = extractNames(ticket.getPotion().getRecipe());
@@ -58,7 +61,7 @@ public class ClientHandler implements Runnable {
                         
                         if (Arrays.equals(userIngredients, targetRecipe)) {
                             targetOrder = ticket;
-                            break; // match found
+                            break; 
                         }
                     }
                     
@@ -72,9 +75,8 @@ public class ClientHandler implements Runnable {
                             Server.broadcast(TerminalColors.BLUE + "[ ACTIVE ] " + playerName + " is working on " 
                                 + targetOrder.getPotion().getName() + "!" + TerminalColors.RESET);
                                 
-                            Thread.sleep(brewTime * 1000L); // the actual game loading state
+                            Thread.sleep(brewTime * 1000L);
 
-                            // confirm the order hasn't already timed out while they were sleeping
                             if (orders.remove(targetOrder)) {
                                 Server.addGold(targetOrder.getPotion().getPrice());
                                 Server.broadcast(TerminalColors.GREEN + "[ $$$ ] YES! " + playerName + " successfully delivered " 

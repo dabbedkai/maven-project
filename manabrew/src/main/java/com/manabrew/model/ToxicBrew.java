@@ -1,8 +1,9 @@
 package com.manabrew.model;
 
+// inheritance 
 public class ToxicBrew extends Potion {
     public ToxicBrew() {
-        super("toxic brew", 2, 30, new Ingredient[]{ 
+        super("Toxic Brew", 2, 30, new Ingredient[]{ 
             new Ingredient("dragon scale"), 
             new Ingredient("fairy dust") 
         });
