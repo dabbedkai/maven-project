@@ -13,6 +13,11 @@ public class Pantry {
         stock.put("fire pepper", 200); 
     }
 
+    public synchronized void addStock(String itemName, int qty) {
+    itemName = itemName.trim().toLowerCase();
+    stock.put(itemName, stock.getOrDefault(itemName, 0) + qty);
+}
+
     // heavily locked down to stop 2 players from duping ingredients at the same time
     public synchronized boolean takeIngredients(String[] stuffWanted) {
         // sanity check loop

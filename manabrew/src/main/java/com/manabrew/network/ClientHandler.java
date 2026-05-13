@@ -7,101 +7,173 @@ import java.net.*;
 import java.util.*;
 
 public class ClientHandler implements Runnable {
-    private Socket socket;
-    private Pantry pantry;
-    private StorageBunker<OrderTicket> orders;
-    private PrintWriter out;
+    private Socket myConnection;
+    private PrintWriter outBuffer;
     private String playerName;
+    
+    private GameRoom myRoom = null; 
 
-    public ClientHandler(Socket socket, Pantry pantry, StorageBunker<OrderTicket> orders) {
-        this.socket = socket;
-        this.pantry = pantry;
-        this.orders = orders;
+    public ClientHandler(Socket s) {
+        this.myConnection = s;
     }
 
-    public void sendMessage(String msg) {
-        if (out != null) out.println(msg);
+    public void sendMessage(String m) {
+        if (outBuffer != null) {
+            outBuffer.println(m);
+        }
+    }
+    
+    public String getUsername() {
+        return playerName;
     }
 
     @Override
     public void run() {
         try {
-            out = new PrintWriter(socket.getOutputStream(), true);
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            outBuffer = new PrintWriter(myConnection.getOutputStream(), true);
+            BufferedReader inReader = new BufferedReader(new InputStreamReader(myConnection.getInputStream()));
             
-            out.println(TerminalColors.CYAN + "Welcome to ManaBrew Co-Op Kitchen!" + TerminalColors.RESET);
-            out.println("What is your alchemist name?");
+            // welcome text and username binding
+            outBuffer.println(TerminalColors.CYAN + "\n~~~ Welcome to ManaBrew Multiplayer ~~" + TerminalColors.RESET);
+            outBuffer.println("Enter your alchemist handle:");
+            playerName = inReader.readLine();
             
-            // waits here until the player hits enter
-            playerName = in.readLine();
-            
-            // now we plug them into the chaos of the active kitchen
-            Server.addPlayer(this);
-            Server.broadcast(TerminalColors.YELLOW + "[ LOGIN ] " + playerName + " entered the kitchen!" + TerminalColors.RESET);
-            out.println("Syntax: brew <ingredient1>, <ingredient2> (e.g. 'brew dragon scale, fairy dust')\n");
+            outBuffer.println(TerminalColors.YELLOW + "Logged in as " + playerName + "." + TerminalColors.RESET);
+            outBuffer.println("Type 'join <code>' to enter or create a lobby (e.g., 'join 1234').\n");
 
-            String input;
-            while ((input = in.readLine()) != null) {
-                if (input.equals("quit")) break;
+            String cmdLine;
+            while ((cmdLine = inReader.readLine()) != null) {
+                if (cmdLine.equalsIgnoreCase("quit")) break;
                 
-                if (input.startsWith("brew ")) {
-                    String reqString = input.substring(5).trim();
-                    String[] userIngredients = reqString.split(",");
-                    
-                    for (int i = 0; i < userIngredients.length; i++) {
-                        userIngredients[i] = userIngredients[i].trim().toLowerCase();
+                // joining lobby
+                if (cmdLine.toLowerCase().startsWith("join ")) {
+                    String code = cmdLine.split(" ")[1];
+                    myRoom = Server.getOrCreateRoom(code);
+                    myRoom.addPlayer(this, playerName);
+                }
+                
+                // round start
+                else if (cmdLine.equalsIgnoreCase("start") && myRoom != null) {
+                    if (myRoom.hostPlayer.equals(playerName)) {
+                        myRoom.startRound();
+                    } else {
+                        outBuffer.println(TerminalColors.RED + "Only the host (" + myRoom.hostPlayer + ") can start the round!" + TerminalColors.RESET);
                     }
+                }
+
+                // shopping phase command
+                else if (cmdLine.toLowerCase().startsWith("shop ") && myRoom != null) {
+                    if (myRoom.isShopPhase) {
+                        String item = cmdLine.substring(5).trim();
+                        if (myRoom.sharedVaultGold >= 10) { 
+                            myRoom.sharedVaultGold -= 10; // Shared resource deduction!
+                            myRoom.roomPantry.addStock(item, 1); 
+                            myRoom.broadcast(TerminalColors.GREEN + playerName + " bought 1x " + item + " for the team!" + TerminalColors.RESET);
+                        } else {
+                            outBuffer.println(TerminalColors.RED + "The team vault is broke! You need 10g." + TerminalColors.RESET);
+                        }
+                    } else {
+                        outBuffer.println(TerminalColors.RED + "The shop is closed during an active round!" + TerminalColors.RESET);
+                    }
+                }
+
+                // ticket locking
+                else if (cmdLine.toLowerCase().startsWith("claim ") && myRoom != null && !myRoom.isShopPhase) {
+                    String wantedName = cmdLine.substring(6).trim();
+                    boolean found = false;
                     
-                    Arrays.sort(userIngredients);
+                    for (OrderTicket ticket : myRoom.orders.getSnapshot()) {
+                        if (ticket.getPotion().getName().equalsIgnoreCase(wantedName)) {
+                            found = true;
+                            // lock attempt
+                            if (ticket.claim(playerName)) {
+                                myRoom.broadcast(TerminalColors.BLUE + playerName + " LOCKED the ticket for: " + wantedName + "!" + TerminalColors.RESET);
+                            } else {
+                                outBuffer.println(TerminalColors.RED + "Too slow! Someone else (" + ticket.getClaimedBy() + ") is doing that order." + TerminalColors.RESET);
+                            }
+                            break;
+                        }
+                    }
+                    if (!found) outBuffer.println(TerminalColors.RED + "Order not found. Check your spelling." + TerminalColors.RESET);
+                }
+
+                // active round
+                else if (cmdLine.toLowerCase().startsWith("brew ") && myRoom != null && !myRoom.isShopPhase) {
+                    String cleanArgs = cmdLine.substring(5).trim();
+                    String[] userGivenIngs = cleanArgs.split(",");
                     
+                    // sorting user input exactly like we did before
+                    for (int k = 0; k < userGivenIngs.length; k++) {
+                        userGivenIngs[k] = userGivenIngs[k].trim().toLowerCase();
+                    }
+                    Arrays.sort(userGivenIngs);
+                    
+                    // checking order history for a match
                     OrderTicket targetOrder = null;
-                    for (OrderTicket ticket : orders.getSnapshot()) {
-                        String[] targetRecipe = extractNames(ticket.getPotion().getRecipe());
-                        Arrays.sort(targetRecipe);
+                    for (OrderTicket possibleTk : myRoom.orders.getSnapshot()) {
+                        String[] requiredIngs = dumpNames(possibleTk.getPotion().getRecipe());
+                        Arrays.sort(requiredIngs);
                         
-                        if (Arrays.equals(userIngredients, targetRecipe)) {
-                            targetOrder = ticket;
+                        if (Arrays.equals(userGivenIngs, requiredIngs)) {
+                            targetOrder = possibleTk;
                             break; 
                         }
                     }
                     
                     if (targetOrder != null) {
-                        if (userIngredients.length == 2 && Brewable.isVolatile(userIngredients[0], userIngredients[1])) {
-                            out.println(TerminalColors.RED + "[ ! ] WARNING: Handling highly volatile mixture!" + TerminalColors.RESET);
-                        }
+                        if (playerName.equals(targetOrder.getClaimedBy())) {
+                            
+                            // explosion utility
+                            if (userGivenIngs.length == 2 && Brewable.isVolatile(userGivenIngs[0], userGivenIngs[1])) {
+                                outBuffer.println(TerminalColors.RED + "CAUTION: Volatile components interacting!" + TerminalColors.RESET);
+                            }
 
-                        if (pantry.takeIngredients(userIngredients)) {
-                            int brewTime = targetOrder.getPotion().calculateBrewTime(targetOrder.getPotion().getTier());
-                            Server.broadcast(TerminalColors.BLUE + "[ ACTIVE ] " + playerName + " is working on " 
-                                + targetOrder.getPotion().getName() + "!" + TerminalColors.RESET);
+                            // deduct ingredients from pantry
+                            if (myRoom.roomPantry.takeIngredients(userGivenIngs)) {
+                                myRoom.broadcast(TerminalColors.BLUE + "[ACTIVE] " + playerName + " is furiously mixing the " + targetOrder.getPotion().getName() + "..." + TerminalColors.RESET);
                                 
-                            Thread.sleep(brewTime * 1000L);
+                                int secs = targetOrder.getPotion().getTier() * 2; 
 
-                            if (orders.remove(targetOrder)) {
-                                Server.addGold(targetOrder.getPotion().getPrice());
-                                Server.broadcast(TerminalColors.GREEN + "[ $$$ ] YES! " + playerName + " successfully delivered " 
-                                    + targetOrder.getPotion().getName() + "! (Gold: " + Server.totalGold + ")" + TerminalColors.RESET);
+                                outBuffer.print(TerminalColors.CYAN + "[");
+                                for(int c = 0; c < 10; c++) {
+                                    outBuffer.print("■"); 
+                                    outBuffer.flush(); 
+                                    Thread.sleep((secs * 100)); 
+                                }
+                                outBuffer.println("] DONE!" + TerminalColors.RESET);
+
+                                if (myRoom.orders.remove(targetOrder)) {
+                                    myRoom.sharedVaultGold += targetOrder.getPotion().getPrice();
+
+                                    Server.potionsDelivered++;
+                                    Server.totalGold += targetOrder.getPotion().getPrice(); 
+                                    
+                                    myRoom.broadcast(TerminalColors.GREEN + "$$ YES! " + playerName + " delivered it! Vault: " + myRoom.sharedVaultGold + "g." + TerminalColors.RESET);
+                                }
                             } else {
-                                out.println(TerminalColors.RED + "Oh no! the ticket expired while you were brewing..." + TerminalColors.RESET);
+                                outBuffer.println(TerminalColors.RED + "Not enough stock in the pantry! Wait for the shopping phase!" + TerminalColors.RESET);
                             }
                         } else {
-                            out.println(TerminalColors.RED + "Not enough raw stock in the pantry!" + TerminalColors.RESET);
+                            outBuffer.println(TerminalColors.RED + "You must lock the order with 'claim " + targetOrder.getPotion().getName() + "' first!" + TerminalColors.RESET);
                         }
                     } else {
-                        out.println(TerminalColors.RED + "[ X ] Unknown combination OR no active order needs this combination right now!" + TerminalColors.RESET);
+                        outBuffer.println(TerminalColors.RED + "Bad combination or no active order matches those ingredients." + TerminalColors.RESET);
                     }
                 }
             }
-        } catch (Exception e) {
-            Server.broadcast(TerminalColors.RED + "[ DISCONNECT ] " + playerName + " dropped out!" + TerminalColors.RESET);
+        } catch (Exception ex) {
+            if (myRoom != null) {
+                myRoom.handleDisconnect(this);
+            }
+            System.out.println(TerminalColors.YELLOW + "Network Log: " + playerName + " left." + TerminalColors.RESET);
         }
     }
 
-    private String[] extractNames(Ingredient[] ings) {
-        String[] arr = new String[ings.length];
-        for(int i = 0; i < ings.length; i++) {
-            arr[i] = ings[i].getName().toLowerCase();
+    private String[] dumpNames(Ingredient[] itemsArr) {
+        String[] txts = new String[itemsArr.length];
+        for(int x = 0; x < itemsArr.length; x++) {
+            txts[x] = itemsArr[x].getName().toLowerCase();
         }
-        return arr;
+        return txts;
     }
 }
