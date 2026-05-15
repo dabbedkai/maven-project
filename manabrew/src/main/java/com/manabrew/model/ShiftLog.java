@@ -1,6 +1,6 @@
 package com.manabrew.model;
 
-// pojo specifically so gson can parse the save file back and forth easily
+// plain data object - Gson serializes and deserializes this to/from shift_logs.json
 public class ShiftLog {
     private String timestamp;
     private int potionsDelivered;

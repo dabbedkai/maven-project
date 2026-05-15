@@ -6,40 +6,42 @@ import java.util.Scanner;
 
 public class Client {
     public static void main(String[] args) {
-        // hardcoding localhost cause we are testing it on the same PC
+        // hardcoded localhost since we're running both sides on the same machine
         try (
-            Socket cSocket = new Socket("localhost", 8080);
-            BufferedReader fromTavern = new BufferedReader(new InputStreamReader(cSocket.getInputStream()));
-            PrintWriter toTavern = new PrintWriter(cSocket.getOutputStream(), true);
-            Scanner inReader = new Scanner(System.in)
+            Socket cSocket      = new Socket("localhost", 8080);
+            BufferedReader fromServer = new BufferedReader(new InputStreamReader(cSocket.getInputStream()));
+            PrintWriter    toServer   = new PrintWriter(cSocket.getOutputStream(), true);
+            Scanner        keyboard   = new Scanner(System.in)
         ) {
-            // this thread just spews server broadcasts straight to our UI
-            new Thread(() -> {
+            // background thread: dumps everything the server sends straight to the terminal
+            // the server handles all screen clearing and drawing, so we just print blindly
+            Thread listener = new Thread(() -> {
                 try {
-                    String serverTxt;
-                    while ((serverTxt = fromTavern.readLine()) != null) {
-                        System.out.println(serverTxt);
+                    String line;
+                    while ((line = fromServer.readLine()) != null) {
+                        System.out.println(line);
                     }
                 } catch (IOException e) {
-                    System.out.println(TerminalColors.RED + "\n[CRITICAL] Server crashed or booted you." + TerminalColors.RESET);
+                    System.out.println(TerminalColors.RED + "\n[disconnected] server closed the connection." + TerminalColors.RESET);
                     System.exit(0);
                 }
-            }).start();
+            });
+            listener.setDaemon(true);
+            listener.start();
 
-            // MAmainIN interaction loop down here
+            // main input loop: read what the player types, ship it to the server
             while (true) {
-                String pTyped = inReader.nextLine();
-                toTavern.println(pTyped);
-                
-                // graceful quit check
-                if (pTyped.equalsIgnoreCase("quit")) {
-                    System.out.println("shutting down client terminal...");
+                String input = keyboard.nextLine();
+                toServer.println(input);
+
+                if (input.equalsIgnoreCase("quit")) {
+                    System.out.println("closing client...");
                     break;
                 }
             }
-            
-        } catch (Exception err) {
-            System.out.println("Connection Failed! Big yikes. Did you launch Server.java first?");
+
+        } catch (Exception e) {
+            System.out.println("couldn't connect. is Server.java running on port 8080?");
         }
     }
 }

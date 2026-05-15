@@ -1,11 +1,22 @@
 package com.manabrew.network;
 
 public class TerminalColors {
-    // added this because a solid white wall of text gives me a headache
-    public static final String RESET = "\u001B[0m";
-    public static final String RED = "\u001B[31m";
-    public static final String GREEN = "\u001B[32m";
-    public static final String YELLOW = "\u001B[33m";
-    public static final String BLUE = "\u001B[34m";
-    public static final String CYAN = "\u001B[36m";
+    public static final String RESET   = "\u001B[0m";
+    public static final String RED     = "\u001B[31m";
+    public static final String GREEN   = "\u001B[32m";
+    public static final String YELLOW  = "\u001B[33m";
+    public static final String BLUE    = "\u001B[34m";
+    public static final String MAGENTA = "\u001B[35m";
+    public static final String CYAN    = "\u001B[36m";
+    public static final String WHITE   = "\u001B[37m";
+    public static final String BOLD    = "\u001B[1m";
+    public static final String DIM     = "\u001B[2m";
+
+    // wipes the screen and snaps cursor to top-left
+    public static final String CLEAR   = "\u001B[2J\u001B[H";
+
+    // strips escape codes so we can measure real visible string length
+    public static String stripAnsi(String s) {
+        return s.replaceAll("\u001B\\[[;\\d]*[mHJK]", "");
+    }
 }
