@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
     // global counters written to the shift log on shutdown
-    public static int totalGold        = 0;
+    public static int totalGold = 0;
     public static int potionsDelivered = 0;
 
     // all active lobbies keyed by their room code
@@ -36,27 +36,30 @@ public class Server {
             System.out.println("waiting for players...");
 
             while (true) {
-                // each connecting client gets its own thread; room assignment happens later in ClientHandler
+                // each connecting client gets its own thread; room assignment happens later in
+                // ClientHandler
                 Socket clientSocket = serverSocket.accept();
                 new Thread(new ClientHandler(clientSocket)).start();
             }
         } catch (IOException e) {
-            System.out.println(TerminalColors.RED + "port 8080 is already in use. kill whatever's on it and retry." + TerminalColors.RESET);
+            System.out.println(TerminalColors.RED + "port 8080 is already in use. kill whatever's on it and retry."
+                    + TerminalColors.RESET);
         }
     }
 
     // writes shift analytics to shift_logs.json when the process exits
     private static void setupSaveHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            Gson gson      = new GsonBuilder().setPrettyPrinting().create();
-            File logFile   = new File("shift_logs.json");
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            File logFile = new File("shift_logs.json");
             ArrayList<ShiftLog> history = new ArrayList<>();
 
             // load existing history if the file is already there
             if (logFile.exists()) {
                 try (Reader r = new FileReader(logFile)) {
                     ShiftLog[] old = gson.fromJson(r, ShiftLog[].class);
-                    if (old != null) history.addAll(Arrays.asList(old));
+                    if (old != null)
+                        history.addAll(Arrays.asList(old));
                 } catch (Exception e) {
                     System.out.println("existing shift_logs.json was unreadable, starting fresh.");
                 }
@@ -68,9 +71,11 @@ public class Server {
             // dump back to disk
             try (Writer w = new FileWriter(logFile)) {
                 gson.toJson(history, w);
-                System.out.println(TerminalColors.GREEN + "[saved] shift analytics written to shift_logs.json" + TerminalColors.RESET);
+                System.out.println(TerminalColors.GREEN + "[saved] shift analytics written to shift_logs.json"
+                        + TerminalColors.RESET);
             } catch (IOException e) {
-                System.out.println(TerminalColors.RED + "[error] could not write shift_logs.json" + TerminalColors.RESET);
+                System.out
+                        .println(TerminalColors.RED + "[error] could not write shift_logs.json" + TerminalColors.RESET);
             }
         }));
     }

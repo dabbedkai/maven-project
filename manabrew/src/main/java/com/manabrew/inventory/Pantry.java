@@ -6,26 +6,27 @@ import java.util.Map;
 public class Pantry {
     private HashMap<String, Integer> stock = new HashMap<>();
 
-    // price lookup for the shop - static so ClientHandler can call it without a pantry ref
+    // price lookup for the shop - static so ClientHandler can call it without a
+    // pantry ref
     private static final Map<String, Integer> PRICES = new HashMap<>();
     static {
-        PRICES.put("water",        5);
+        PRICES.put("water", 5);
         PRICES.put("dragon scale", 15);
-        PRICES.put("fairy dust",   12);
-        PRICES.put("fire pepper",  10);
-        PRICES.put("lunar shard",  20);
+        PRICES.put("fairy dust", 12);
+        PRICES.put("fire pepper", 10);
+        PRICES.put("lunar shard", 20);
         PRICES.put("void extract", 25);
     }
 
     public Pantry() {
         // reduced starting stock so the shop phase actually matters
-        stock.put("water",        10);
-        stock.put("dragon scale",  5);
-        stock.put("fairy dust",    5);
-        stock.put("fire pepper",   5);
+        stock.put("water", 10);
+        stock.put("dragon scale", 5);
+        stock.put("fairy dust", 5);
+        stock.put("fire pepper", 5);
         // rarer ingredients start at zero - players must buy them
-        stock.put("lunar shard",   0);
-        stock.put("void extract",  0);
+        stock.put("lunar shard", 0);
+        stock.put("void extract", 0);
     }
 
     // returns the gold cost for an ingredient, or -1 if it's not sold here
@@ -47,9 +48,10 @@ public class Pantry {
     // deducts all requested items atomically - checks first, then deducts
     // synchronized so two players can't pull the last unit at the same time
     public synchronized boolean takeIngredients(String[] items) {
-        // first pass: verify everything is available
+        // verify everything is available
         for (String item : items) {
-            if (stock.getOrDefault(item.trim(), 0) <= 0) return false;
+            if (stock.getOrDefault(item.trim(), 0) <= 0)
+                return false;
         }
         // second pass: actually deduct
         for (String item : items) {

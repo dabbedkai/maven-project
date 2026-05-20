@@ -10,6 +10,6 @@ public interface Brewable {
     // currently only dragon scale + fairy dust triggers this
     static boolean isVolatile(String a, String b) {
         return (a.equals("dragon scale") && b.equals("fairy dust")) ||
-               (a.equals("fairy dust")   && b.equals("dragon scale"));
+                (a.equals("fairy dust") && b.equals("dragon scale"));
     }
 }
